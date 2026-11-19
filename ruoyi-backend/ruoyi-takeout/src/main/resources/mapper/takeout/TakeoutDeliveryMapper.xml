@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.takeout.mapper.TakeoutDeliveryMapper">
+
+    <resultMap id="DeliveryResult" type="TakeoutDeliveryTask">
+        <id     property="taskId"          column="task_id"/>
+        <result property="taskNo"          column="task_no"/>
+        <result property="orderId"         column="order_id"/>
+        <result property="orderNo"         column="order_no"/>
+        <result property="riderId"         column="rider_id"/>
+        <result property="riderName"       column="rider_name"/>
+        <result property="status"          column="status"/>
+        <result property="merchantName"    column="merchant_name"/>
+        <result property="merchantAddress" column="merchant_address"/>
+        <result property="receiverName"    column="receiver_name"/>
+        <result property="receiverPhone"   column="receiver_phone"/>
+        <result property="deliveryAddress" column="delivery_address"/>
+        <result property="acceptTime"      column="accept_time"/>
+        <result property="arriveTime"      column="arrive_time"/>
+        <result property="pickupTime"      column="pickup_time"/>
+        <result property="deliverTime"     column="deliver_time"/>
+        <result property="version"         column="version"/>
+        <result property="createBy"        column="create_by"/>
+        <result property="createTime"      column="create_time"/>
+        <result property="updateBy"        column="update_by"/>
+        <result property="updateTime"      column="update_time"/>
+        <result property="remark"          column="remark"/>
+    </resultMap>
+
+    <sql id="columns">
+        d.task_id, d.task_no, d.order_id, o.order_no,
+        d.rider_id, u.nick_name as rider_name,
+        d.status, d.merchant_name, d.merchant_address,
+        d.receiver_name, d.receiver_phone, d.delivery_address,
+        d.accept_time, d.arrive_time, d.pickup_time, d.deliver_time,
+        d.version, d.create_by, d.create_time, d.update_by, d.update_time, d.remark
+    </sql>
+
+    <select id="selectDeliveryList" parameterType="TakeoutDeliveryTask" resultMap="DeliveryResult">
+        select <include refid="columns"/> from takeout_delivery_task d
+        left join takeout_order o on o.order_id = d.order_id
+        left join sys_user u on u.user_id = d.rider_id
+        <where>
+            <if test="taskId != null">and d.task_id = #{taskId}</if>
+            <if test="taskNo != null and taskNo != ''">and d.task_no = #{taskNo}</if>
+            <if test="orderId != null">and d.order_id = #{orderId}</if>
+            <if test="orderNo != null and orderNo != ''">and o.order_no = #{orderNo}</if>
+            <if test="riderId != null">and d.rider_id = #{riderId}</if>
+            <if test="status != null and status != ''">and d.status = #{status}</if>
+            <if test="merchantName != null and merchantName != ''">and d.merchant_name like concat('%', #{merchantName}, '%')</if>
+        </where>
+        order by d.create_time desc, d.task_id desc
+    </select>
+
+    <select id="selectDeliveryById" parameterType="Long" resultMap="DeliveryResult">
+        select <include refid="columns"/> from takeout_delivery_task d
+        left join takeout_order o on o.order_id = d.order_id
+        left join sys_user u on u.user_id = d.rider_id
+        where d.task_id = #{taskId}
+    </select>
+
+    <select id="selectDeliveryByOrderId" parameterType="Long" resultMap="DeliveryResult">
+        select <include refid="columns"/> from takeout_delivery_task d
+        left join takeout_order o on o.order_id = d.order_id
+        left join sys_user u on u.user_id = d.rider_id
+        where d.order_id = #{orderId}
+    </select>
+
+    <select id="selectDeliveryByIdForUpdate" parameterType="Long" resultMap="DeliveryResult">
+        select <include refid="columns"/> from takeout_delivery_task d
+        left join takeout_order o on o.order_id = d.order_id
+        left join sys_user u on u.user_id = d.rider_id
+        where d.task_id = #{taskId} for update
+    </select>
+
+    <select id="selectDeliveryByOrderIdForUpdate" parameterType="Long" resultMap="DeliveryResult">
+        select <include refid="columns"/> from takeout_delivery_task d
+        left join takeout_order o on o.order_id = d.order_id
+        left join sys_user u on u.user_id = d.rider_id
+        where d.order_id = #{orderId} for update
+    </select>
+
+    <insert id="insertDelivery" parameterType="TakeoutDeliveryTask" useGeneratedKeys="true" keyProperty="taskId">
+        insert into takeout_delivery_task (task_no, order_id, status,
+            merchant_name, merchant_address, receiver_name, receiver_phone, delivery_address,
+            version, create_by, create_time, remark)
+        values (#{taskNo}, #{orderId}, #{status},
+            #{merchantName}, #{merchantAddress}, #{receiverName}, #{receiverPhone}, #{deliveryAddress},
+            0, #{createBy}, sysdate(), #{remark})
+    </insert>
+
+    <update id="assignDelivery">
+        update takeout_delivery_task set rider_id = #{riderId}, status = 'ASSIGNED',
+            update_by = #{updateBy}, update_time = sysdate(), version = version + 1
+        where task_id = #{taskId} and status = 'UNASSIGNED' and version = #{version}
+    </update>
+
+    <update id="updateDeliveryStatus">
+        update takeout_delivery_task
+        <set>
+            <if test="toStatus == 'ARRIVED'">arrive_time = sysdate(),</if>
+            <if test="toStatus == 'PICKED_UP'">pickup_time = sysdate(),</if>
+            <if test="toStatus == 'DELIVERED'">deliver_time = sysdate(),</if>
+            status = #{toStatus},
+            update_by = #{updateBy}, update_time = sysdate(), version = version + 1
+        </set>
+        where task_id = #{taskId} and rider_id = #{riderId}
+          and status = #{fromStatus} and version = #{version}
+    </update>
+
+    <select id="selectRiderOptions" resultType="SysUser">
+        select user_id as userId, nick_name as nickName, user_name as userName, phonenumber as phonenumber
+        from sys_user where del_flag = '0' and status = '0' and user_type = '1'
+        order by create_time desc
+    </select>
+
+</mapper>

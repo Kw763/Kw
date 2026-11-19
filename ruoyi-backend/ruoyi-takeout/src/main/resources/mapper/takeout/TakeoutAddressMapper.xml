@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.takeout.mapper.TakeoutAddressMapper">
+    <resultMap id="AddressResult" type="TakeoutAddress">
+        <id property="addressId" column="address_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="userName" column="user_name"/>
+        <result property="receiverName" column="receiver_name"/>
+        <result property="receiverPhone" column="receiver_phone"/>
+        <result property="province" column="province"/>
+        <result property="city" column="city"/>
+        <result property="district" column="district"/>
+        <result property="detailAddress" column="detail_address"/>
+        <result property="isDefault" column="is_default"/>
+        <result property="delFlag" column="del_flag"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+    <sql id="columns">a.address_id, a.user_id, u.nick_name user_name, a.receiver_name, a.receiver_phone,
+        a.province, a.city, a.district, a.detail_address, a.is_default, a.del_flag,
+        a.create_by, a.create_time, a.update_by, a.update_time, a.remark</sql>
+
+    <select id="selectAddressList" parameterType="TakeoutAddress" resultMap="AddressResult">
+        select <include refid="columns"/> from takeout_address a
+        left join sys_user u on u.user_id = a.user_id
+        where a.del_flag = '0'
+        <if test="addressId != null">and a.address_id = #{addressId}</if>
+        <if test="userId != null">and a.user_id = #{userId}</if>
+        <if test="receiverName != null and receiverName != ''">and a.receiver_name like concat('%', #{receiverName}, '%')</if>
+        <if test="receiverPhone != null and receiverPhone != ''">and a.receiver_phone = #{receiverPhone}</if>
+        order by a.is_default desc, a.update_time desc, a.address_id desc
+    </select>
+    <select id="selectAddressById" parameterType="Long" resultMap="AddressResult">
+        select <include refid="columns"/> from takeout_address a
+        left join sys_user u on u.user_id = a.user_id
+        where a.address_id = #{addressId} and a.del_flag = '0'
+    </select>
+    <select id="selectAddressByIdAndUserId" resultMap="AddressResult">
+        select <include refid="columns"/> from takeout_address a
+        left join sys_user u on u.user_id = a.user_id
+        where a.address_id = #{addressId} and a.user_id = #{userId} and a.del_flag = '0'
+    </select>
+    <insert id="insertAddress" parameterType="TakeoutAddress" useGeneratedKeys="true" keyProperty="addressId">
+        insert into takeout_address (user_id, receiver_name, receiver_phone, province, city, district,
+            detail_address, is_default, del_flag, create_by, create_time, remark)
+        values (#{userId}, #{receiverName}, #{receiverPhone}, #{province}, #{city}, #{district},
+            #{detailAddress}, #{isDefault}, '0', #{createBy}, sysdate(), #{remark})
+    </insert>
+    <update id="updateAddress" parameterType="TakeoutAddress">
+        update takeout_address
+        <set>
+            receiver_name = #{receiverName}, receiver_phone = #{receiverPhone}, province = #{province},
+            city = #{city}, district = #{district}, detail_address = #{detailAddress},
+            is_default = #{isDefault}, remark = #{remark}, update_by = #{updateBy}, update_time = sysdate()
+        </set>
+        where address_id = #{addressId} and user_id = #{userId} and del_flag = '0'
+    </update>
+    <update id="clearDefaultAddress">
+        update takeout_address set is_default = 'N', update_by = #{updateBy}, update_time = sysdate()
+        where user_id = #{userId} and is_default = 'Y' and del_flag = '0'
+    </update>
+    <update id="setDefaultAddress">
+        update takeout_address set is_default = 'Y', update_by = #{updateBy}, update_time = sysdate()
+        where address_id = #{addressId} and user_id = #{userId} and del_flag = '0'
+    </update>
+    <update id="deleteAddressByIdAndUserId">
+        update takeout_address set del_flag = '2', is_default = 'N', update_by = #{updateBy}, update_time = sysdate()
+        where address_id = #{addressId} and user_id = #{userId} and del_flag = '0'
+    </update>
+    <update id="deleteAddressById" parameterType="Long">
+        update takeout_address set del_flag = '2', is_default = 'N', update_time = sysdate()
+        where address_id = #{addressId} and del_flag = '0'
+    </update>
+</mapper>

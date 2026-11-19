@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.takeout.mapper.TakeoutOrderMapper">
+
+    <resultMap id="OrderResult" type="TakeoutOrder">
+        <id     property="orderId"         column="order_id"/>
+        <result property="orderNo"         column="order_no"/>
+        <result property="requestNo"       column="request_no"/>
+        <result property="userId"          column="user_id"/>
+        <result property="userName"        column="user_name"/>
+        <result property="merchantId"      column="merchant_id"/>
+        <result property="merchantName"    column="merchant_name"/>
+        <result property="receiverName"    column="receiver_name"/>
+        <result property="receiverPhone"   column="receiver_phone"/>
+        <result property="deliveryAddress" column="delivery_address"/>
+        <result property="totalAmount"     column="total_amount"/>
+        <result property="status"          column="status"/>
+        <result property="version"         column="version"/>
+        <result property="createBy"        column="create_by"/>
+        <result property="createTime"      column="create_time"/>
+        <result property="updateBy"        column="update_by"/>
+        <result property="updateTime"      column="update_time"/>
+        <result property="remark"          column="remark"/>
+    </resultMap>
+
+    <resultMap id="OrderItemResult" type="TakeoutOrderItem">
+        <id     property="itemId"       column="item_id"/>
+        <result property="orderId"      column="order_id"/>
+        <result property="productId"    column="product_id"/>
+        <result property="productName"  column="product_name"/>
+        <result property="productImage" column="product_image"/>
+        <result property="productPrice" column="product_price"/>
+        <result property="quantity"     column="quantity"/>
+        <result property="subtotal"     column="subtotal"/>
+    </resultMap>
+
+    <sql id="orderColumns">
+        o.order_id, o.order_no, o.request_no, o.user_id, u.user_name,
+        o.merchant_id, m.merchant_name,
+        o.receiver_name, o.receiver_phone, o.delivery_address,
+        o.total_amount, o.status, o.version,
+        o.create_by, o.create_time, o.update_by, o.update_time, o.remark
+    </sql>
+
+    <sql id="orderItemColumns">
+        item_id, order_id, product_id, product_name, product_image, product_price, quantity, subtotal
+    </sql>
+
+    <select id="selectOrderList" parameterType="TakeoutOrder" resultMap="OrderResult">
+        select <include refid="orderColumns"/> from takeout_order o
+        left join takeout_merchant m on m.merchant_id = o.merchant_id
+        left join sys_user u on u.user_id = o.user_id
+        <where>
+            <if test="orderId != null">and o.order_id = #{orderId}</if>
+            <if test="orderNo != null and orderNo != ''">and o.order_no = #{orderNo}</if>
+            <if test="requestNo != null and requestNo != ''">and o.request_no = #{requestNo}</if>
+            <if test="userId != null">and o.user_id = #{userId}</if>
+            <if test="merchantId != null">and o.merchant_id = #{merchantId}</if>
+            <if test="merchantName != null and merchantName != ''">and m.merchant_name like concat('%', #{merchantName}, '%')</if>
+            <if test="status != null and status != ''">and o.status = #{status}</if>
+        </where>
+        order by o.create_time desc, o.order_id desc
+    </select>
+
+    <select id="selectOrderById" parameterType="Long" resultMap="OrderResult">
+        select <include refid="orderColumns"/> from takeout_order o
+        left join takeout_merchant m on m.merchant_id = o.merchant_id
+        left join sys_user u on u.user_id = o.user_id
+        where o.order_id = #{orderId}
+    </select>
+
+    <select id="selectOrderByIdForUpdate" parameterType="Long" resultMap="OrderResult">
+        select <include refid="orderColumns"/> from takeout_order o
+        left join takeout_merchant m on m.merchant_id = o.merchant_id
+        left join sys_user u on u.user_id = o.user_id
+        where o.order_id = #{orderId}
+        for update
+    </select>
+
+    <select id="selectOrderByUserRequest" resultMap="OrderResult">
+        select <include refid="orderColumns"/> from takeout_order o
+        left join takeout_merchant m on m.merchant_id = o.merchant_id
+        left join sys_user u on u.user_id = o.user_id
+        where o.user_id = #{userId} and o.request_no = #{requestNo}
+    </select>
+
+    <insert id="insertOrder" parameterType="TakeoutOrder" useGeneratedKeys="true" keyProperty="orderId">
+        insert into takeout_order (order_no, request_no, user_id, merchant_id,
+            receiver_name, receiver_phone, delivery_address,
+            total_amount, status, version,
+            create_by, create_time, remark)
+        values (#{orderNo}, #{requestNo}, #{userId}, #{merchantId},
+            #{receiverName}, #{receiverPhone}, #{deliveryAddress},
+            #{totalAmount}, #{status}, 0,
+            #{createBy}, sysdate(), #{remark})
+    </insert>
+
+    <update id="updateOrderStatus">
+        update takeout_order set status = #{toStatus},
+            update_by = #{updateBy}, update_time = sysdate(), version = version + 1
+        where order_id = #{orderId} and status = #{fromStatus} and version = #{version}
+    </update>
+
+    <insert id="insertOrderItem" parameterType="TakeoutOrderItem" useGeneratedKeys="true" keyProperty="itemId">
+        insert into takeout_order_item (order_id, product_id, product_name, product_image,
+            product_price, quantity, subtotal)
+        values (#{orderId}, #{productId}, #{productName}, #{productImage},
+            #{productPrice}, #{quantity}, #{subtotal})
+    </insert>
+
+    <select id="selectOrderItems" parameterType="Long" resultMap="OrderItemResult">
+        select <include refid="orderItemColumns"/> from takeout_order_item where order_id = #{orderId}
+        order by item_id asc
+    </select>
+
+</mapper>

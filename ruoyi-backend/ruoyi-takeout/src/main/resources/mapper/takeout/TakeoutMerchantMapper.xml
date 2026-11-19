@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.takeout.mapper.TakeoutMerchantMapper">
+    <resultMap id="MerchantResult" type="TakeoutMerchant">
+        <id property="merchantId" column="merchant_id"/>
+        <result property="merchantName" column="merchant_name"/>
+        <result property="ownerUserId" column="owner_user_id"/>
+        <result property="ownerName" column="owner_name"/>
+        <result property="contactPhone" column="contact_phone"/>
+        <result property="logo" column="logo"/>
+        <result property="address" column="address"/>
+        <result property="openTime" column="open_time"/>
+        <result property="closeTime" column="close_time"/>
+        <result property="notice" column="notice"/>
+        <result property="status" column="status"/>
+        <result property="delFlag" column="del_flag"/>
+        <result property="version" column="version"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="remark" column="remark"/>
+    </resultMap>
+
+    <sql id="columns">m.merchant_id, m.merchant_name, m.owner_user_id, u.nick_name owner_name,
+        m.contact_phone, m.logo, m.address, m.open_time, m.close_time, m.notice, m.status,
+        m.del_flag, m.version, m.create_by, m.create_time, m.update_by, m.update_time, m.remark</sql>
+
+    <select id="selectMerchantList" parameterType="TakeoutMerchant" resultMap="MerchantResult">
+        select <include refid="columns"/> from takeout_merchant m
+        left join sys_user u on u.user_id = m.owner_user_id
+        where m.del_flag = '0'
+        <if test="merchantId != null">and m.merchant_id = #{merchantId}</if>
+        <if test="ownerUserId != null">and m.owner_user_id = #{ownerUserId}</if>
+        <if test="merchantName != null and merchantName != ''">and m.merchant_name like concat('%', #{merchantName}, '%')</if>
+        <if test="status != null and status != ''">and m.status = #{status}</if>
+        order by m.create_time desc, m.merchant_id desc
+    </select>
+
+    <select id="selectMerchantById" parameterType="Long" resultMap="MerchantResult">
+        select <include refid="columns"/> from takeout_merchant m
+        left join sys_user u on u.user_id = m.owner_user_id
+        where m.merchant_id = #{merchantId} and m.del_flag = '0'
+    </select>
+
+    <select id="selectMerchantByOwnerId" parameterType="Long" resultMap="MerchantResult">
+        select <include refid="columns"/> from takeout_merchant m
+        left join sys_user u on u.user_id = m.owner_user_id
+        where m.owner_user_id = #{ownerUserId} and m.del_flag = '0'
+        limit 1
+    </select>
+
+    <insert id="insertMerchant" parameterType="TakeoutMerchant" useGeneratedKeys="true" keyProperty="merchantId">
+        insert into takeout_merchant (merchant_name, owner_user_id, contact_phone, logo, address,
+            open_time, close_time, notice, status, del_flag, version, create_by, create_time, remark)
+        values (#{merchantName}, #{ownerUserId}, #{contactPhone}, #{logo}, #{address},
+            #{openTime}, #{closeTime}, #{notice}, #{status}, '0', 0, #{createBy}, sysdate(), #{remark})
+    </insert>
+
+    <update id="updateMerchant" parameterType="TakeoutMerchant">
+        update takeout_merchant
+        <set>
+            <if test="merchantName != null">merchant_name = #{merchantName},</if>
+            <if test="ownerUserId != null">owner_user_id = #{ownerUserId},</if>
+            <if test="contactPhone != null">contact_phone = #{contactPhone},</if>
+            <if test="logo != null">logo = #{logo},</if>
+            <if test="address != null">address = #{address},</if>
+            <if test="openTime != null">open_time = #{openTime},</if>
+            <if test="closeTime != null">close_time = #{closeTime},</if>
+            <if test="notice != null">notice = #{notice},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            update_by = #{updateBy}, update_time = sysdate(), version = version + 1
+        </set>
+        where merchant_id = #{merchantId} and del_flag = '0' and version = #{version}
+    </update>
+
+    <update id="deleteMerchantById" parameterType="Long">
+        update takeout_merchant set del_flag = '2', update_time = sysdate()
+        where merchant_id = #{merchantId} and del_flag = '0'
+    </update>
+</mapper>
